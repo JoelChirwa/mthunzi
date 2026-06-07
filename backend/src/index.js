@@ -53,13 +53,30 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use(requestLogger);
 
+import prisma from './lib/prisma.js';
+
 // Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: NODE_ENV,
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Ping the database to verify connection status
+    await prisma.$queryRaw`SELECT 1`;
+    
+    res.json({
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      environment: NODE_ENV,
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Database connection timed out or failed',
+      timestamp: new Date().toISOString(),
+      environment: NODE_ENV,
+    });
+  }
 });
 
 // Rate Limiting

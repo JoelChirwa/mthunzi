@@ -34,13 +34,14 @@ async function sendEmail({ to, subject, html, replyTo }) {
 
 function buildDonationDetailsHtml(data) {
   return `
-    <h2>Donation Details</h2>
-    <p><strong>Transaction Reference:</strong> ${data.tx_ref || data.txRef || 'N/A'}</p>
-    <p><strong>Status:</strong> ${data.status || 'N/A'}</p>
-    <p><strong>Amount:</strong> ${data.currency || ''} ${data.amount || 'N/A'}</p>
-    <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
-    <p><strong>Payment Type:</strong> ${data.payment_type || data.type || 'N/A'}</p>
-    <p><strong>Transaction ID:</strong> ${data.transaction_id || data.id || 'N/A'}</p>
+    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 18px; margin: 15px 0;">
+      <p style="margin: 0 0 10px; font-size: 14px; color: #495057;"><strong>Transaction Reference:</strong> ${data.tx_ref || data.txRef || 'N/A'}</p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: #495057;"><strong>Status:</strong> <span style="font-weight: bold; color: ${data.status === 'completed' || data.status === 'Completed' || data.status === 'COMPLETED' ? '#28a745' : '#dc3545'};">${data.status || 'N/A'}</span></p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: #495057;"><strong>Amount:</strong> <span style="font-size: 16px; font-weight: bold; color: #0056b3;">${data.currency || 'MWK'} ${data.amount || 'N/A'}</span></p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: #495057;"><strong>Email:</strong> ${data.email || 'N/A'}</p>
+      <p style="margin: 0 0 10px; font-size: 14px; color: #495057;"><strong>Payment Type:</strong> ${data.payment_type || data.type || 'N/A'}</p>
+      <p style="margin: 0; font-size: 14px; color: #495057;"><strong>Transaction ID:</strong> ${data.transaction_id || data.id || 'N/A'}</p>
+    </div>
   `;
 }
 
@@ -51,11 +52,16 @@ async function sendDonationReceiptEmail(data) {
     to: data.email,
     subject: 'Thank you for your donation to Mthunzi Trust',
     html: `
-      <h1>Donation Received</h1>
-      <p>Dear donor,</p>
-      <p>Thank you for your support. Your donation has been received successfully.</p>
-      ${buildDonationDetailsHtml(data)}
-      <p>We appreciate your contribution to our mission.</p>
+      <div style="font-family: Arial, sans-serif; color: #111111; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e3f2fd; border-radius: 14px;">
+          <h1 style="margin-bottom: 8px; color: #28a745; font-size: 24px;">Donation Received successfully!</h1>
+          <p style="margin: 0 0 16px; font-size: 15px; color: #333333;">Dear donor,</p>
+          <p style="margin: 0 0 16px; font-size: 15px; color: #333333;">Thank you for your generous support. Your contribution goes a long way in assisting our ongoing development efforts in Malawi.</p>
+          ${buildDonationDetailsHtml(data)}
+          <p style="margin: 16px 0 0; font-size: 15px; color: #333333;">We appreciate your support and contribution to our mission.</p>
+          <p style="margin: 20px 0 0; font-size: 15px; color: #333333;">Warm regards,<br />Mthunzi Trust Team</p>
+        </div>
+      </div>
     `,
   });
 }
@@ -67,24 +73,34 @@ async function sendDonationFailureEmail(data) {
     to: data.email,
     subject: 'Donation Payment Failed',
     html: `
-      <h1>Donation Payment Failed</h1>
-      <p>Dear donor,</p>
-      <p>We were unable to complete your payment. Please try again or contact support if you need assistance.</p>
-      ${buildDonationDetailsHtml(data)}
-      <p>If you need help, reply to this message or contact us through the website.</p>
+      <div style="font-family: Arial, sans-serif; color: #111111; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #f8d7da; border-radius: 14px;">
+          <h1 style="margin-bottom: 8px; color: #dc3545; font-size: 24px;">Donation Payment Failed</h1>
+          <p style="margin: 0 0 16px; font-size: 15px; color: #333333;">Dear donor,</p>
+          <p style="margin: 0 0 16px; font-size: 15px; color: #333333;">We were unable to complete your payment process. Please review your credentials or try again. Contact support if you need immediate assistance.</p>
+          ${buildDonationDetailsHtml(data)}
+          <p style="margin: 16px 0 0; font-size: 15px; color: #333333;">If you need help, reply directly to this message.</p>
+          <p style="margin: 20px 0 0; font-size: 15px; color: #333333;">Sincerely,<br />Mthunzi Trust Team</p>
+        </div>
+      </div>
     `,
   });
 }
 
 async function notifyAdmin(data, status) {
+  const color = status === 'Completed' ? '#28a745' : status === 'Expired' ? '#ffc107' : '#dc3545';
   await sendEmail({
     to: adminEmail,
     subject: `Donation ${status} - Mthunzi Trust`,
     html: `
-      <h1>Donation ${status}</h1>
-      <p>The following donation event was recorded by PayChangu:</p>
-      ${buildDonationDetailsHtml(data)}
-      <p>Check the admin dashboard for more details.</p>
+      <div style="font-family: Arial, sans-serif; color: #111111; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #cfe2ff; border-radius: 14px;">
+          <h2 style="margin: 0 0 12px; color: ${color};">Donation ${status} Notification</h2>
+          <p style="margin: 0; font-size: 14px; color: #333333;">The following payment event was received from PayChangu:</p>
+          ${buildDonationDetailsHtml(data)}
+          <p style="margin: 20px 0 0; font-size: 13px; color: #6c757d;">This is an automated administrative notification. Please log into the administration panel to view complete logs.</p>
+        </div>
+      </div>
     `,
   });
 }

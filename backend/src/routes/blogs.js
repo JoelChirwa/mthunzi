@@ -92,6 +92,9 @@ router.post('/', authenticate, async (req, res) => {
       slug = `${slug}-${Date.now()}`;
     }
 
+    // Capture active authenticated admin user's name or email
+    const authorName = req.user?.name || req.user?.email || 'Admin';
+
     const blog = await prisma.blog.create({
       data: {
         title,
@@ -99,7 +102,7 @@ router.post('/', authenticate, async (req, res) => {
         excerpt: excerpt || '',
         content: content || '',
         image: image || null,
-        author: null,
+        author: authorName,
         category: category || 'News',
         status: status || 'DRAFT',
       },
