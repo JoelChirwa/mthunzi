@@ -107,7 +107,7 @@ export default function Team() {
 
         <div className="flex justify-center">
           <Button asChild variant="default" className="bg-green-600 hover:bg-green-700 text-white">
-            <Link href="/contact">Work with Us</Link>
+            <Link href="/volunteer">Work with Us</Link>
           </Button>
         </div>
       </div>

@@ -87,18 +87,24 @@ export default function GetInvolvedPage() {
               Learn about partnerships
             </Link>
           </div>
-          <div className="rounded-3xl bg-linear-to-br from-green-100 to-green-200 p-10 text-center shadow-sm">
-            <div className="text-5xl font-black text-green-700">🤝</div>
-            <p className="mt-4 text-lg font-semibold text-gray-900">Collaborate on programs, funding, training, and storytelling.</p>
+          <div className="overflow-hidden rounded-3xl shadow-lg h-72 md:h-96 relative">
+            <img
+              src="/images/partner.jpg"
+              alt="Partner with Mthunzi Trust"
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            />
           </div>
         </div>
       </section>
 
       <section className="py-16 md:py-24 px-6 md:px-12 bg-white">
         <div className="max-w-6xl mx-auto grid gap-12 lg:grid-cols-2 items-center">
-          <div className="rounded-3xl bg-linear-to-br from-blue-100 to-blue-200 p-10 text-center shadow-sm">
-            <div className="text-5xl font-black text-blue-700">🌍</div>
-            <p className="mt-4 text-lg font-semibold text-gray-900">Volunteer directly with communities and program teams.</p>
+          <div className="overflow-hidden rounded-3xl shadow-lg h-72 md:h-96 relative lg:order-first order-last">
+            <img
+              src="/images/volunteer.jpg"
+              alt="Volunteer with Mthunzi Trust"
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            />
           </div>
           <div className="space-y-6">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-700">Volunteer now</p>
