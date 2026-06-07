@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { v2 as cloudinary } from 'cloudinary';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import Project from '../models/Project.js';
 
 const router = Router();
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -92,9 +92,7 @@ function normalizeImpact(value) {
 
 router.get('/', async (req, res) => {
   try {
-    const projects = await prisma.project.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const projects = await Project.find().sort({ createdAt: -1 });
     res.json(projects);
   } catch (error) {
     console.error('Failed to fetch projects:', error);
@@ -107,16 +105,14 @@ router.post('/', authenticate, upload.single('image'), async (req, res) => {
 
   try {
     const image = req.file ? await getProjectImageUrl(req.file) : '/images/hero.jpg';
-    const newProject = await prisma.project.create({
-      data: {
-        title: title?.trim() || 'Untitled Project',
-        location: location?.trim() || 'Unknown location',
-        description: description || null,
-        goal: goal || null,
-        impact: normalizeImpact(impact),
-        image,
-        status: status?.trim() || 'ONGOING',
-      },
+    const newProject = await Project.create({
+      title: title?.trim() || 'Untitled Project',
+      location: location?.trim() || 'Unknown location',
+      description: description || null,
+      goal: goal || null,
+      impact: normalizeImpact(impact),
+      image,
+      status: status?.trim() || 'ONGOING',
     });
 
     res.status(201).json(newProject);
@@ -128,9 +124,7 @@ router.post('/', authenticate, upload.single('image'), async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-    });
+    const project = await Project.findById(req.params.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -147,18 +141,16 @@ router.patch('/:id', authenticate, upload.single('image'), async (req, res) => {
   const { title, location, description, goal, impact, status } = req.body;
 
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-    });
+    const project = await Project.findById(req.params.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
     const image = req.file ? await getProjectImageUrl(req.file) : project.image;
-    const updatedProject = await prisma.project.update({
-      where: { id: req.params.id },
-      data: {
+    const updatedProject = await Project.findByIdAndUpdate(
+      req.params.id,
+      {
         title: title?.trim() ?? project.title,
         location: location?.trim() ?? project.location,
         description: description ?? project.description,
@@ -167,7 +159,8 @@ router.patch('/:id', authenticate, upload.single('image'), async (req, res) => {
         image,
         status: status?.trim() ?? project.status,
       },
-    });
+      { new: true }
+    );
 
     res.json(updatedProject);
   } catch (error) {
@@ -178,17 +171,13 @@ router.patch('/:id', authenticate, upload.single('image'), async (req, res) => {
 
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    const existingProject = await prisma.project.findUnique({
-      where: { id: req.params.id },
-    });
+    const existingProject = await Project.findById(req.params.id);
 
     if (!existingProject) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    await prisma.project.delete({
-      where: { id: req.params.id },
-    });
+    await Project.findByIdAndDelete(req.params.id);
 
     res.json({ success: true, message: 'Project deleted' });
   } catch (error) {

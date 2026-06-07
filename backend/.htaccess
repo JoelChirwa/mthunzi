@@ -1,0 +1,16 @@
+# Mthunzi Trust cPanel Deployment routing
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Force HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Express API Proxy Rule
+    # If the backend is running on a specific local port (e.g., 5000) instead of cPanel's Node Selector subfolder
+    # RewriteCond %{REQUEST_URI} ^/api/
+    # RewriteRule ^api/(.*)$ http://localhost:5000/api/$1 [P,L]
+
+    # Passenger Node.js routing rules are typically generated automatically by cPanel.
+    # If Passenger does not automatically map the subfolder, you can uncomment the ProxyPass/Rewrite rules above.
+</IfModule>

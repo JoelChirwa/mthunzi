@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import Blog from '../models/Blog.js';
+import Project from '../models/Project.js';
+import Partner from '../models/Partner.js';
+import Donation from '../models/Donation.js';
+import PageView from '../models/PageView.js';
 
 const router = Router();
 
@@ -14,30 +18,35 @@ router.get('/', authenticate, async (req, res) => {
       totalProjects,
       totalPartners,
       activePartners,
-      totalDonations,
+      donationStats,
       totalPageViews,
       last30DayViews,
     ] = await Promise.all([
-      prisma.blog.count(),
-      prisma.blog.count({ where: { status: 'PUBLISHED' } }),
-      prisma.blog.count({ where: { status: 'DRAFT' } }),
-      prisma.project.count(),
-      prisma.partner.count(),
-      prisma.partner.count({ where: { status: 'active' } }),
-      prisma.donation.aggregate({
-        _count: { id: true },
-        _sum: { amount: true },
-        where: { status: 'COMPLETED' },
-      }),
-      prisma.pageView.count(),
-      prisma.pageView.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      Blog.countDocuments(),
+      Blog.countDocuments({ status: 'PUBLISHED' }),
+      Blog.countDocuments({ status: 'DRAFT' }),
+      Project.countDocuments(),
+      Partner.countDocuments(),
+      Partner.countDocuments({ status: 'active' }),
+      Donation.aggregate([
+        { $match: { status: 'COMPLETED' } },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$amount' },
           },
+        },
+      ]),
+      PageView.countDocuments(),
+      PageView.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         },
       }),
     ]);
+
+    const donationResult = donationStats[0] || { count: 0, totalAmount: 0 };
 
     res.json({
       blogs: {
@@ -48,8 +57,8 @@ router.get('/', authenticate, async (req, res) => {
       projects: { total: totalProjects },
       partners: { total: totalPartners, active: activePartners },
       donations: {
-        count: totalDonations._count.id,
-        total: totalDonations._sum.amount || 0,
+        count: donationResult.count,
+        total: donationResult.totalAmount,
       },
       analytics: {
         totalViews: totalPageViews,

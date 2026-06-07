@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import nodemailer from 'nodemailer';
-import prisma from '../lib/prisma.js';
+import Volunteer from '../models/Volunteer.js';
 
 const router = Router();
 
@@ -51,16 +51,14 @@ router.post('/', async (req, res) => {
     const sm = escapeHtml(message || '');
 
     // Save to Database
-    const volunteer = await prisma.volunteer.create({
-      data: {
-        fullName,
-        email,
-        phone,
-        gender,
-        location,
-        qualification,
-        message: message || '',
-      },
+    const volunteer = await Volunteer.create({
+      fullName,
+      email,
+      phone,
+      gender,
+      location,
+      qualification,
+      message: message || '',
     });
 
     const messageHtml = `

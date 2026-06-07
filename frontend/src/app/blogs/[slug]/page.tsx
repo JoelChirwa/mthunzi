@@ -98,7 +98,7 @@ function renderMarkdown(text: string): string {
     .replace(/^- (.+)$/gm, '<li class="ml-6 list-disc mb-2 text-gray-700">$1</li>')
     .replace(/\n\n/g, '</p><p class="mb-4 text-gray-700 leading-relaxed">')
     .replace(/\n/g, "<br />")
-    .replace(/(<li[^>]*>.*?<\/li>)/gs, '<ul class="my-4">$1</ul>');
+    .replace(/(<li[^>]*>[\s\S]*?<\/li>)/g, '<ul class="my-4">$1</ul>');
 }
 
 // ─── Page component ───────────────────────────────────────────────────────────

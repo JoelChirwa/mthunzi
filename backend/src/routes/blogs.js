@@ -1,19 +1,15 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import Blog from '../models/Blog.js';
 
 const router = Router();
 
 // Normalize blog object shapes coming from different backends
 function normalizeBlog(b) {
   if (!b) return b;
-  const blog = Object.assign({}, b);
-  // some servers/datastores use _id
-  if (blog._id && !blog.id) {
-    blog.id = String(blog._id);
-    delete blog._id;
-  }
+  const blog = b.toObject ? b.toObject() : Object.assign({}, b);
   // ensure publishedAt or createdAt consistency
   if (!blog.publishedAt && blog.createdAt) {
     blog.publishedAt = blog.createdAt;
@@ -35,7 +31,7 @@ function generateSlug(title) {
 router.get('/', async (req, res) => {
   try {
     const { status, category, limit, offset } = req.query;
-    const where = {};
+    const query = {};
 
     // Try to extract user from authorization header if present
     let isAuthenticated = false;
@@ -53,20 +49,20 @@ router.get('/', async (req, res) => {
     }
 
     if (isAuthenticated) {
-      if (status) where.status = status;
+      if (status) query.status = status;
     } else {
       // Unauthenticated users can only see PUBLISHED blogs
-      where.status = 'PUBLISHED';
+      query.status = 'PUBLISHED';
     }
 
-    if (category) where.category = category;
+    if (category) query.category = category;
 
-    const blogs = await prisma.blog.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit ? parseInt(limit) : undefined,
-      skip: offset ? parseInt(offset) : undefined,
-    });
+    const blogsQuery = Blog.find(query).sort({ createdAt: -1 });
+
+    if (offset) blogsQuery.skip(parseInt(offset));
+    if (limit) blogsQuery.limit(parseInt(limit));
+
+    const blogs = await blogsQuery;
 
     res.json(blogs.map(normalizeBlog));
   } catch (error) {
@@ -87,7 +83,7 @@ router.post('/', authenticate, async (req, res) => {
     let slug = req.body.slug || generateSlug(title);
 
     // Ensure slug is unique
-    let existingBlog = await prisma.blog.findUnique({ where: { slug } });
+    let existingBlog = await Blog.findOne({ slug });
     if (existingBlog) {
       slug = `${slug}-${Date.now()}`;
     }
@@ -95,17 +91,15 @@ router.post('/', authenticate, async (req, res) => {
     // Capture active authenticated admin user's name or email
     const authorName = req.user?.name || req.user?.email || 'Admin';
 
-    const blog = await prisma.blog.create({
-      data: {
-        title,
-        slug,
-        excerpt: excerpt || '',
-        content: content || '',
-        image: image || null,
-        author: authorName,
-        category: category || 'News',
-        status: status || 'DRAFT',
-      },
+    const blog = await Blog.create({
+      title,
+      slug,
+      excerpt: excerpt || '',
+      content: content || '',
+      image: image || null,
+      author: authorName,
+      category: category || 'News',
+      status: status || 'DRAFT',
     });
 
     res.status(201).json(normalizeBlog(blog));
@@ -120,14 +114,14 @@ router.get('/:idOrSlug', async (req, res) => {
   try {
     const { idOrSlug } = req.params;
 
-    let blog = await prisma.blog.findUnique({
-      where: { slug: idOrSlug },
-    });
+    let blog = null;
+
+    if (mongoose.isValidObjectId(idOrSlug)) {
+      blog = await Blog.findById(idOrSlug);
+    }
 
     if (!blog) {
-      blog = await prisma.blog.findUnique({
-        where: { id: idOrSlug },
-      });
+      blog = await Blog.findOne({ slug: idOrSlug });
     }
 
     if (!blog) {
@@ -147,7 +141,11 @@ router.patch('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
     const { title, excerpt, content, image, category, status, slug } = req.body;
 
-    const blog = await prisma.blog.findUnique({ where: { id } });
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid Blog ID' });
+    }
+
+    const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
@@ -155,17 +153,15 @@ router.patch('/:id', authenticate, async (req, res) => {
     let newSlug = slug || blog.slug;
     if (title && title !== blog.title) {
       newSlug = slug || generateSlug(title);
-      const existingBlog = await prisma.blog.findUnique({
-        where: { slug: newSlug },
-      });
+      const existingBlog = await Blog.findOne({ slug: newSlug });
       if (existingBlog && existingBlog.id !== id) {
         newSlug = `${newSlug}-${Date.now()}`;
       }
     }
 
-    const updatedBlog = await prisma.blog.update({
-      where: { id },
-      data: {
+    const updatedBlog = await Blog.findByIdAndUpdate(
+      id,
+      {
         title: title ?? blog.title,
         slug: newSlug,
         excerpt: excerpt ?? blog.excerpt,
@@ -174,7 +170,8 @@ router.patch('/:id', authenticate, async (req, res) => {
         category: category ?? blog.category,
         status: status ?? blog.status,
       },
-    });
+      { new: true }
+    );
 
     res.json(normalizeBlog(updatedBlog));
   } catch (error) {
@@ -188,12 +185,16 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const blog = await prisma.blog.findUnique({ where: { id } });
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid Blog ID' });
+    }
+
+    const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ error: 'Blog post not found' });
     }
 
-    await prisma.blog.delete({ where: { id } });
+    await Blog.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Blog post deleted' });
   } catch (error) {

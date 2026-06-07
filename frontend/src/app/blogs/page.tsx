@@ -68,7 +68,6 @@ function getPaginatedBlogs(
 
 function BlogCard({ blog }: { blog: Blog }) {
   const slug = getBlogSlug(blog);
-  const date = blog.createdAt || blog.publishedAt;
 
   return (
     <Link href={`/blogs/${slug}`}>
@@ -94,7 +93,6 @@ function BlogCard({ blog }: { blog: Blog }) {
             <span className="rounded bg-green-100 px-3 py-1 text-green-800">
               {blog.category || "News"}
             </span>
-            <span className="text-gray-500">{formatDate(date)}</span>
           </div>
           <h3 className="text-xl font-extrabold leading-snug text-black">
             {blog.title}

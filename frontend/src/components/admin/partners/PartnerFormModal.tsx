@@ -11,7 +11,7 @@ type Partner = {
   _id?: string;
   name: string;
   logo?: string | null;
-  website?: string;
+  website?: string | null;
   status: string;
 };
 

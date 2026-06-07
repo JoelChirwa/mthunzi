@@ -53,13 +53,15 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use(requestLogger);
 
-import prisma from './lib/prisma.js';
+import connectDB from './lib/db.js';
 
 // Health check
-app.get('/health', async (req, res) => {
+app.get(['/health', '/api/health'], async (req, res) => {
   try {
     // Ping the database to verify connection status
-    await prisma.$queryRaw`SELECT 1`;
+    const db = await connectDB();
+    const isConnected = db.connection.readyState === 1;
+    if (!isConnected) throw new Error('Database is not connected');
     
     res.json({
       status: 'healthy',
@@ -118,17 +120,31 @@ app.use((req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`
-    ╔═══════════════════════════════════════╗
-    ║  Mthunzi Trust Backend Server         ║
-    ║  Status: Running                      ║
-    ║  Environment: ${NODE_ENV.padEnd(28)}║
-    ║  Port: ${String(PORT).padEnd(33)}║
-    ║  URL: http://localhost:${String(PORT).padEnd(20)}║
-    ╚═══════════════════════════════════════╝
-  `);
-});
+// Connect to database then start server
+const serverURL = NODE_ENV === 'production'
+  ? (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : `https://mthunzitrust.org/api`)
+  : `http://localhost:${PORT}`;
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`
+        ╔═══════════════════════════════════════╗
+        ║  Mthunzi Trust Backend Server         ║
+        ║  Status: Running                      ║
+        ║  Environment: ${NODE_ENV.padEnd(28)}║
+        ║  Port: ${String(PORT).padEnd(33)}║
+        ║  URL: ${serverURL.padEnd(31)}║
+        ╚═══════════════════════════════════════╝
+      `);
+    });
+  })
+  .catch((err) => {
+    console.error('Database connection failed on startup:', err);
+    // Boot anyway so cPanel doesn't crash, allowing requests to hit the health-check to debug
+    app.listen(PORT, () => {
+      console.log(`Express started on port ${PORT} (Database disconnected)`);
+    });
+  });
 
 export default app;

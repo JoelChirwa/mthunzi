@@ -1,47 +1,60 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    // If token exists, redirect to admin
+    const token = localStorage.getItem("token");
+    if (token) {
       router.push("/admin");
     }
-  }, [status, router]);
+  }, [router]);
 
   async function handleLogin() {
     setLoading(true);
     setError("");
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        setError("Invalid credentials");
-      } else if (result?.ok) {
-        router.push("/admin");
-      } else {
-        setError("Login failed");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || "Invalid credentials");
+        return;
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      setError("Login failed. Please check your credentials.");
+
+      // Save token and user details in localStorage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect to admin dashboard
+      router.push("/admin");
+      // Force page reload so the middleware/layout picks up the token change
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Login failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

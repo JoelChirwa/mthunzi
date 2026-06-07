@@ -132,11 +132,9 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <AuthProvider>
-          <Analytics />
-          <ConditionalNavbar />
-          {children}
-        </AuthProvider>
+        <Analytics />
+        <ConditionalNavbar />
+        {children}
       </body>
     </html>
   );

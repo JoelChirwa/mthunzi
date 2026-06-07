@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import nodemailer from 'nodemailer';
-import prisma from '../lib/prisma.js';
+import Donation from '../models/Donation.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -180,15 +180,12 @@ async function handleChargeCompleted(data) {
   try {
     console.log(`Processing completed charge: ${reference}`);
 
-    const updateResult = await prisma.donation.updateMany({
-      where: { paymentRef: reference },
-      data: {
-        status: 'COMPLETED',
-        updatedAt: new Date(),
-      },
-    });
+    const updateResult = await Donation.updateMany(
+      { paymentRef: reference },
+      { status: 'COMPLETED' }
+    );
 
-    if (updateResult.count === 0) {
+    if (updateResult.matchedCount === 0) {
       console.warn(`No matching donation record found for reference ${reference}`);
     }
 
@@ -213,15 +210,12 @@ async function handleChargeFailed(data) {
   try {
     console.log(`Processing failed charge: ${reference}`);
 
-    const updateResult = await prisma.donation.updateMany({
-      where: { paymentRef: reference },
-      data: {
-        status: 'FAILED',
-        updatedAt: new Date(),
-      },
-    });
+    const updateResult = await Donation.updateMany(
+      { paymentRef: reference },
+      { status: 'FAILED' }
+    );
 
-    if (updateResult.count === 0) {
+    if (updateResult.matchedCount === 0) {
       console.warn(`No matching donation record found for reference ${reference}`);
     }
 
@@ -246,15 +240,12 @@ async function handleChargeExpired(data) {
   try {
     console.log(`Processing expired charge: ${reference}`);
 
-    const updateResult = await prisma.donation.updateMany({
-      where: { paymentRef: reference },
-      data: {
-        status: 'EXPIRED',
-        updatedAt: new Date(),
-      },
-    });
+    const updateResult = await Donation.updateMany(
+      { paymentRef: reference },
+      { status: 'EXPIRED' }
+    );
 
-    if (updateResult.count === 0) {
+    if (updateResult.matchedCount === 0) {
       console.warn(`No matching donation record found for reference ${reference}`);
     }
 

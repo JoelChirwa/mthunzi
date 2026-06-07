@@ -117,9 +117,8 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-        colours[status] ?? colours.ongoing
-      }`}
+      className={`inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${colours[status] ?? colours.ongoing
+        }`}
     >
       {status}
     </span>
@@ -138,26 +137,25 @@ function ProjectCard({
   const normalizedStatus = project.status?.toString().toLowerCase() || 'ongoing';
   const isLocalImage = project.image
     ? project.image.startsWith('http://localhost') ||
-      project.image.startsWith('http://127.0.0.1') ||
-      project.image.startsWith('http://[::1]')
+    project.image.startsWith('http://127.0.0.1') ||
+    project.image.startsWith('http://[::1]')
     : false;
-  
+
   const isBackendUpload = project.image
     ? project.image.startsWith(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}`) ||
-      project.image.startsWith('/uploads')
+    project.image.startsWith('/uploads')
     : false;
   const useNextImage = Boolean(project.image) && !isLocalImage && !isBackendUpload;
   const imgSrc = project.image
     ? // if relative uploads path, prefix backend URL so browser requests backend directly
-      project.image.startsWith('/uploads')
+    project.image.startsWith('/uploads')
       ? `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'}${project.image}`
       : project.image
     : undefined;
   return (
     <article
-      className={`group flex flex-col overflow-hidden rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-2xl ${
-        isEven ? "lg:flex-row" : "lg:flex-row-reverse"
-      }`}
+      className={`group flex flex-col overflow-hidden rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-2xl ${isEven ? "lg:flex-row" : "lg:flex-row-reverse"
+        }`}
     >
       {/* Image */}
       <div className="relative h-72 w-full shrink-0 overflow-hidden lg:h-auto lg:w-1/2">
@@ -281,7 +279,7 @@ export default async function ProjectsPage() {
             <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-700">
               <p className="text-lg font-semibold">No projects are available yet.</p>
               <p className="mt-2 text-sm text-slate-500">
-                Projects are loaded from the backend database once they are created.
+                Check back soon as they being loaded...!!!
               </p>
             </div>
           )}

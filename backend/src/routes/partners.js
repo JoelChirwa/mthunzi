@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import Partner from '../models/Partner.js';
 
 const router = Router();
 
@@ -8,13 +8,10 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { status } = req.query;
-    const where = {};
-    if (status) where.status = status;
+    const query = {};
+    if (status) query.status = status;
 
-    const partners = await prisma.partner.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    const partners = await Partner.find(query).sort({ createdAt: -1 });
     res.json(partners);
   } catch (error) {
     console.error('Error fetching partners:', error);
@@ -31,13 +28,11 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Partner name is required' });
     }
 
-    const partner = await prisma.partner.create({
-      data: {
-        name: name.trim(),
-        logo: logo || null,
-        website: website || null,
-        status: status || 'active',
-      },
+    const partner = await Partner.create({
+      name: name.trim(),
+      logo: logo || null,
+      website: website || null,
+      status: status || 'active',
     });
 
     res.status(201).json(partner);
@@ -51,7 +46,7 @@ router.post('/', authenticate, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const partner = await prisma.partner.findUnique({ where: { id } });
+    const partner = await Partner.findById(id);
 
     if (!partner) {
       return res.status(404).json({ error: 'Partner not found' });
@@ -70,20 +65,21 @@ router.patch('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
     const { name, logo, website, status } = req.body;
 
-    const existing = await prisma.partner.findUnique({ where: { id } });
+    const existing = await Partner.findById(id);
     if (!existing) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    const partner = await prisma.partner.update({
-      where: { id },
-      data: {
+    const partner = await Partner.findByIdAndUpdate(
+      id,
+      {
         name: name ?? existing.name,
         logo: logo !== undefined ? logo : existing.logo,
         website: website !== undefined ? website : existing.website,
         status: status ?? existing.status,
       },
-    });
+      { new: true }
+    );
 
     res.json(partner);
   } catch (error) {
@@ -97,12 +93,12 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const existing = await prisma.partner.findUnique({ where: { id } });
+    const existing = await Partner.findById(id);
     if (!existing) {
       return res.status(404).json({ error: 'Partner not found' });
     }
 
-    await prisma.partner.delete({ where: { id } });
+    await Partner.findByIdAndDelete(id);
     res.json({ success: true, message: 'Partner deleted' });
   } catch (error) {
     console.error('Error deleting partner:', error);

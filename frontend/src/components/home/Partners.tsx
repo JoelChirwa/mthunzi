@@ -51,7 +51,7 @@ export default async function Partners() {
           {displayPartners.map((partner: Partner, index: number) => {
             const key = `${partner.id || partner._id}-${index}`;
             const card = (
-              <div className="shrink-0 mx-8 flex flex-col items-center gap-2 group">
+              <div className="shrink-0 mx-8 flex flex-col items-center group">
                 <div className="relative w-32 h-20 md:w-40 md:h-24 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center p-3 shadow-sm group-hover:shadow-md transition-shadow">
                   {partner.logo ? (
                     <Image
@@ -67,9 +67,6 @@ export default async function Partners() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-gray-500 text-center max-w-[120px] truncate">
-                  {partner.name}
-                </p>
               </div>
             );
 

@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import Donation from '../models/Donation.js';
 
 const router = Router();
 
@@ -110,16 +109,14 @@ const initiateDonationCharge = async (body, chargeType) => {
     throw createHttpError(400, response.data.message || 'Payment initiation failed');
   }
 
-  await prisma.donation.create({
-    data: {
-      donorName: body.fullName,
-      email: body.email,
-      amount: body.amount,
-      currency,
-      paymentRef: chargeId,
-      message: body.message,
-      status: 'PENDING',
-    },
+  await Donation.create({
+    donorName: body.fullName,
+    email: body.email,
+    amount: body.amount,
+    currency,
+    paymentRef: chargeId,
+    message: body.message,
+    status: 'PENDING',
   });
 
   // Send admin notification and donor confirmation (if email provided)
@@ -310,17 +307,17 @@ router.get('/verify/:chargeId', async (req, res) => {
       const chargeData = response.data.data;
 
       // Update donation record in database
-      await prisma.donation.updateMany({
-        where: { paymentRef: chargeId },
-        data: {
+      await Donation.updateMany(
+        { paymentRef: chargeId },
+        {
           status:
             chargeData.status === 'completed'
               ? 'COMPLETED'
               : chargeData.status === 'pending'
                 ? 'PENDING'
                 : 'FAILED',
-        },
-      });
+        }
+      );
 
       // Check payment status
       if (chargeData.status === 'completed') {
@@ -373,26 +370,39 @@ router.get('/verify/:chargeId', async (req, res) => {
  */
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    const stats = await prisma.donation.aggregate({
-      _sum: {
-        amount: true,
+    const statsResult = await Donation.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
       },
-      _count: true,
-    });
+    ]);
 
-    const byStatus = await prisma.donation.groupBy({
-      by: ['status'],
-      _sum: {
-        amount: true,
+    const stats = statsResult[0] || { count: 0, totalAmount: 0 };
+
+    const byStatusRaw = await Donation.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          totalAmount: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
       },
-      _count: true,
-    });
+    ]);
+
+    const byStatus = byStatusRaw.map((group) => ({
+      status: group._id,
+      _sum: { amount: group.totalAmount },
+      _count: group.count,
+    }));
 
     return res.json({
       success: true,
       data: {
-        total: stats._count,
-        totalAmount: stats._sum.amount || 0,
+        total: stats.count,
+        totalAmount: stats.totalAmount,
         byStatus,
       },
     });
@@ -410,11 +420,7 @@ router.get('/stats', authenticate, async (req, res) => {
  */
 router.get('/', authenticate, async (req, res) => {
   try {
-    const donations = await prisma.donation.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const donations = await Donation.find().sort({ createdAt: -1 });
 
     return res.json({
       success: true,

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/authenticate.js';
-import prisma from '../lib/prisma.js';
+import PageView from '../models/PageView.js';
 
 const router = Router();
 
@@ -49,14 +49,12 @@ router.post('/track', async (req, res) => {
       }
     }
 
-    await prisma.pageView.create({
-      data: {
-        path: path || '/',
-        country,
-        city,
-        ipHash: hashIp(ip),
-        device: device || null,
-      },
+    await PageView.create({
+      path: path || '/',
+      country,
+      city,
+      ipHash: hashIp(ip),
+      device: device || null,
     });
 
     res.status(201).json({ ok: true });
@@ -84,45 +82,40 @@ router.get('/stats', authenticate, async (req, res) => {
       dailyViews,
     ] = await Promise.all([
       // Total all-time views
-      prisma.pageView.count(),
+      PageView.countDocuments(),
 
       // Last 30 days
-      prisma.pageView.count({
-        where: { createdAt: { gte: thirtyDaysAgo } },
-      }),
+      PageView.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
 
       // Last 7 days
-      prisma.pageView.count({
-        where: { createdAt: { gte: sevenDaysAgo } },
-      }),
+      PageView.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
 
       // Views by country
-      prisma.pageView.groupBy({
-        by: ['country'],
-        _count: { country: true },
-        where: { country: { not: null } },
-        orderBy: { _count: { country: 'desc' } },
-        take: 10,
-      }),
+      PageView.aggregate([
+        { $match: { country: { $ne: null } } },
+        { $group: { _id: "$country", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]),
 
       // Top pages
-      prisma.pageView.groupBy({
-        by: ['path'],
-        _count: { path: true },
-        orderBy: { _count: { path: 'desc' } },
-        take: 5,
-      }),
+      PageView.aggregate([
+        { $group: { _id: "$path", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]),
 
-      // Daily views for last 30 days (raw query)
-      prisma.$queryRaw`
-        SELECT 
-          DATE("createdAt") as date,
-          COUNT(*) as count
-        FROM "PageView"
-        WHERE "createdAt" >= ${thirtyDaysAgo}
-        GROUP BY DATE("createdAt")
-        ORDER BY date ASC
-      `,
+      // Daily views for last 30 days
+      PageView.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
     ]);
 
     res.json({
@@ -130,15 +123,15 @@ router.get('/stats', authenticate, async (req, res) => {
       last30Days,
       last7Days,
       countries: countryBreakdown.map((c) => ({
-        country: c.country,
-        count: c._count.country,
+        country: c._id,
+        count: c.count,
       })),
       topPages: topPages.map((p) => ({
-        path: p.path,
-        count: p._count.path,
+        path: p._id,
+        count: p.count,
       })),
       dailyViews: dailyViews.map((d) => ({
-        date: d.date,
+        date: d._id,
         count: Number(d.count),
       })),
     });
