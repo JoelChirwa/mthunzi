@@ -1,114 +1,69 @@
-import NextAuth, { AuthOptions, DefaultSession, getServerSession } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import bcryptjs from "bcryptjs";
+/**
+ * JWT Authentication Utilities
+ * Uses custom JWT tokens stored in localStorage
+ * Backend handles token generation and validation
+ */
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      role: string;
-    } & DefaultSession["user"];
-  }
-
-  interface User {
-    role: string;
-  }
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: "ADMIN" | "EDITOR" | "VIEWER";
 }
 
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: string;
+export interface LoginResponse {
+  success: boolean;
+  token: string;
+  user: User;
+  message?: string;
+}
+
+/**
+ * Get the JWT token from localStorage
+ */
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+}
+
+/**
+ * Get the current user from localStorage
+ */
+export function getCurrentUser(): User | null {
+  if (typeof window === "undefined") return null;
+  const userStr = localStorage.getItem("user");
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
   }
 }
 
 /**
- * Users are defined by email + bcrypt-hashed password stored in env variables.
- * Passwords are NEVER stored or compared in plaintext.
- * To regenerate hashes:
- *   node -e "require('bcryptjs').hash('yourPassword', 12).then(console.log)"
+ * Check if user is authenticated
  */
-const users = [
-  {
-    id: "1",
-    email: process.env.ADMIN_EMAIL || "info@mthunzitrust.org",
-    passwordHash: process.env.ADMIN_PASSWORD_HASH || "",
-    role: "ADMIN",
-  },
-  {
-    id: "2",
-    email: process.env.EDITOR_EMAIL || "editor@mthunzi.org",
-    passwordHash: process.env.EDITOR_PASSWORD_HASH || "",
-    role: "EDITOR",
-  },
-  {
-    id: "3",
-    email: process.env.VIEWER_EMAIL || "viewer@mthunzi.org",
-    passwordHash: process.env.VIEWER_PASSWORD_HASH || "",
-    role: "VIEWER",
-  },
-];
+export function isAuthenticated(): boolean {
+  return !!getToken();
+}
 
-export const authOptions: AuthOptions = {
-  debug: process.env.NODE_ENV === "development",
-  providers: [
-    Credentials({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+/**
+ * Check if user has a specific role
+ */
+export function hasRole(role: string | string[]): boolean {
+  const user = getCurrentUser();
+  if (!user) return false;
+  if (Array.isArray(role)) {
+    return role.includes(user.role);
+  }
+  return user.role === role;
+}
 
-        const user = users.find((u) => u.email === credentials.email);
-
-        if (!user || !user.passwordHash) {
-          return null;
-        }
-
-        // Secure bcrypt comparison — never plain-text equality
-        const isValid = await bcryptjs.compare(credentials.password, user.passwordHash);
-        if (!isValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.email,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }: { token: any; user?: any }) {
-      if (user) {
-        token.role = user.role;
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }: { session: any; token: any }) {
-      if (session.user) {
-        session.user.role = token.role as string;
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
-  },
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-};
-
-export async function auth() {
-  return getServerSession(authOptions);
+/**
+ * Clear authentication (logout)
+ */
+export function clearAuth(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 }

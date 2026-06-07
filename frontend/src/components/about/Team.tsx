@@ -43,7 +43,7 @@ export default function Team() {
 
           const fallbackData = await fallbackResponse.json();
           setTeamMembers(Array.isArray(fallbackData) ? fallbackData : []);
-          setError("The backend is unavailable. Showing local team data if available.");
+          setError(""); // Silently use fallback without showing error to user
         } catch (fallbackError) {
           console.error("Failed to load team members from both backend and local fallback.", fallbackError);
           setTeamMembers([]);

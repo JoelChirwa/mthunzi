@@ -19,7 +19,7 @@ export default function CTASection() {
               size="lg"
               className="bg-white text-green-700 hover:bg-gray-100 font-bold px-8 py-4"
             >
-              <Link href="/partner">
+              <Link href="/get-involved">
                 Partner With Us
               </Link>
             </Button>

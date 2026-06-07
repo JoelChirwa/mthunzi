@@ -23,12 +23,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/programmes" className="text-gray-400 hover:text-white transition">
+                <Link href="/programs" className="text-gray-400 hover:text-white transition">
                   Our Programmes
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="text-gray-400 hover:text-white transition">
+                <Link href="/blogs" className="text-gray-400 hover:text-white transition">
                   Blog
                 </Link>
               </li>
@@ -45,22 +45,22 @@ export default function Footer() {
             <h3 className="text-lg font-bold mb-4">Programmes</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/programmes/education" className="text-gray-400 hover:text-white transition">
+                <Link href="/programs/education" className="text-gray-400 hover:text-white transition">
                   Education
                 </Link>
               </li>
               <li>
-                <Link href="/programmes/environment" className="text-gray-400 hover:text-white transition">
+                <Link href="/programs/environment" className="text-gray-400 hover:text-white transition">
                   Environmental Conservation
                 </Link>
               </li>
               <li>
-                <Link href="/programmes/youth" className="text-gray-400 hover:text-white transition">
+                <Link href="/programs/youth" className="text-gray-400 hover:text-white transition">
                   Youth Empowerment
                 </Link>
               </li>
               <li>
-                <Link href="/programmes/community" className="text-gray-400 hover:text-white transition">
+                <Link href="/programs/community" className="text-gray-400 hover:text-white transition">
                   Community Development
                 </Link>
               </li>
